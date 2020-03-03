@@ -2,8 +2,11 @@
 """
 ons
 ===
-ONS file readers.
+UK Office for National Statistics (ONS) data file readers.
 """
+
+__version__ = '0.1.0'
+
 
 import io
 
