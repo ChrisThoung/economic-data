@@ -11,7 +11,7 @@ import os
 import numpy as np
 
 from pandas import DataFrame, Index
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 import pandas as pd
 
 from ons import CSV
@@ -19,7 +19,7 @@ from ons import CSV
 
 current_dir = os.path.split(__file__)[0]
 
-csv_filepath = os.path.join(current_dir, 'data', 'ons.csv')
+csv_filepath = os.path.join(current_dir, 'test_data', 'ons.csv')
 csv_expected_metadata = '''\
 "CDID","AB12","XY90"
 "Title","First variable","Variable 2"
