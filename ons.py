@@ -5,13 +5,15 @@ ons
 UK Office for National Statistics (ONS) data file readers.
 """
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
+import csv
 import io
+import itertools
 
 
-class CSV(object):
+class CSV:
     """File-like object to read UK Office for National Statistics (ONS) CSV time-series datasets
     e.g. the UK Economic Accounts:
          https://www.ons.gov.uk/economy/grossdomesticproductgdp/datasets/unitedkingdomeconomicaccounts
@@ -56,28 +58,63 @@ class CSV(object):
             self._buffer = self._iter(open(path_or_buffer))
 
     def _iter(self, buffer):
-        # Read file header (mix of metadata and column titles), breaking on
-        # first line of data
-        metadata = []
+        # Copy `buffer` twice:
+        #  - `reader_stream`: to check the header and metadata
+        #  - `line_stream`: to return data (as distinct from header/metadata)
+        reader_stream, line_stream = itertools.tee(buffer, 2)
 
-        for line in buffer:
-            label = line.split(',', maxsplit=1)[0].replace('"', '')
+        # Locate the header and metadata in the file, by line index
+        header_ranges = []
+        metadata_ranges = []
 
+        reader = csv.reader(reader_stream)
+
+        start = reader.line_num
+        for row in reader:
+            # Store line indexes for the row as a `range()` object
+            end = reader.line_num
+            lines = range(start, end)
+            start = end
+
+            # Check row contents
+            label = row[0]
+
+            # Header
             if label == self.code:
-                header = line
+                header_ranges.append(lines)
+
+            # Metadata
             elif label in self.fields:
-                metadata.append(line)
+                metadata_ranges.append(lines)
+
+            # Anything else: Assume data and break
+            else:
+                break
+
+        # Convert line locations to lists of int
+        header_indexes = list(itertools.chain.from_iterable(header_ranges))
+        metadata_indexes = list(itertools.chain.from_iterable(metadata_ranges))
+
+        # Read header and metadata lines to separate lists
+        header_lines = []
+        metadata_lines = []
+        for i, line in enumerate(line_stream):
+            if i in header_indexes:
+                header_lines.append(line)
+            elif i in metadata_indexes:
+                metadata_lines.append(line)
             else:
                 break
 
         # Assemble metadata into a string
-        self._metadata = ''.join([header] + metadata)
+        self._metadata = ''.join(itertools.chain(header_lines, metadata_lines))
 
         # Assemble iterator from column titles and data
         def data():
-            yield header
+            yield from header_lines
             yield line
-            yield from buffer
+            yield from line_stream
+
         return data()
 
     @property

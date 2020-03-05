@@ -7,6 +7,7 @@ Tests for ONS file readers.
 
 import csv
 import os
+import unittest
 
 import numpy as np
 
@@ -128,3 +129,41 @@ def test_csv_pandas():
                                               'Release Date',
                                               'Next release',
                                               'Important Notes'], name='CDID')))
+
+
+class TestCSVMultiLine(unittest.TestCase):
+
+    CSV_FILEPATH = os.path.join(current_dir, 'test_data', 'ons_multiline.csv')
+    CSV_EXPECTED_METADATA = '''\
+"CDID","AB12","XY90"
+"Title","First variable","Variable 2"
+"PreUnit","
+£","£
+"
+"Unit","","m"
+"Release Date","13-01-2018","13-01-2018"
+"Next release","16
+February
+2018","16
+February
+2018"
+"Important Notes","",""
+'''
+
+    def test_csv_string(self):
+        # Test that string contents (on `read()`) match
+        with open(self.CSV_FILEPATH) as f:
+            ons = CSV(f)
+            data = ons.read()
+            metadata = ons.metadata.read()
+
+        assert data == '''\
+"CDID","AB12","XY90"
+"1946","1.0",""
+"1947","2.0","0.0"
+'''
+        assert metadata == self.CSV_EXPECTED_METADATA
+
+
+if __name__ == '__main__':
+    unittest.main()
