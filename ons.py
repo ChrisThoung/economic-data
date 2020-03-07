@@ -28,7 +28,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 
 import csv
@@ -71,8 +71,8 @@ class CSV:
 
     __slots__ = ['_buffer', '_metadata']
 
-    code = 'CDID'
-    fields = ['Title', 'PreUnit', 'Unit', 'Release Date', 'Next release', 'Important Notes']
+    CODE = 'CDID'
+    FIELDS = ['Title', 'PreUnit', 'Unit', 'Release Date', 'Next release', 'Important Notes']
 
     def __init__(self, path_or_buffer):
         if hasattr(path_or_buffer, 'read'):
@@ -86,9 +86,9 @@ class CSV:
         #  - `line_stream`: to return data (as distinct from header/metadata)
         reader_stream, line_stream = itertools.tee(buffer, 2)
 
-        # Locate the header and metadata in the file, by line index
-        header_ranges = []
-        metadata_ranges = []
+        # Read header and metadata to separate lists
+        header_lines = []
+        metadata_lines = []
 
         reader = csv.reader(reader_stream)
 
@@ -96,36 +96,23 @@ class CSV:
         for row in reader:
             # Store line indexes for the row as a `range()` object
             end = reader.line_num
-            lines = range(start, end)
+            count = end - start
             start = end
 
             # Check row contents
             label = row[0]
 
             # Header
-            if label == self.code:
-                header_ranges.append(lines)
+            if label == self.CODE:
+                for _ in range(count):
+                    header_lines.append(next(line_stream))
 
             # Metadata
-            elif label in self.fields:
-                metadata_ranges.append(lines)
+            elif label in self.FIELDS:
+                for _ in range(count):
+                    metadata_lines.append(next(line_stream))
 
             # Anything else: Assume data and break
-            else:
-                break
-
-        # Convert line locations to lists of int
-        header_indexes = list(itertools.chain.from_iterable(header_ranges))
-        metadata_indexes = list(itertools.chain.from_iterable(metadata_ranges))
-
-        # Read header and metadata lines to separate lists
-        header_lines = []
-        metadata_lines = []
-        for i, line in enumerate(line_stream):
-            if i in header_indexes:
-                header_lines.append(line)
-            elif i in metadata_indexes:
-                metadata_lines.append(line)
             else:
                 break
 
@@ -135,7 +122,6 @@ class CSV:
         # Assemble iterator from column titles and data
         def data():
             yield from header_lines
-            yield line
             yield from line_stream
 
         return data()
@@ -153,7 +139,7 @@ class CSV:
 
     def read(self, size=-1):
         if size == -1:
-            return ''.join(list(self._buffer))
+            return ''.join(self._buffer)
         else:
             return self.readline()
 
