@@ -7,7 +7,7 @@ UK Office for National Statistics (ONS) data file readers.
 -------------------------------------------------------------------------------
 MIT License
 
-Copyright (c) 2018-20 Chris Thoung
+Copyright (c) 2018-21 Chris Thoung
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 
 import csv
@@ -69,16 +69,21 @@ class CSV:
     >>>     metadata = pd.read_csv(f.metadata, index_col=0)
     """
 
-    __slots__ = ['_buffer', '_metadata']
+    __slots__ = ['_buffer', '_metadata', '_stream']
 
     CODE = 'CDID'
     FIELDS = ['Title', 'PreUnit', 'Unit', 'Release Date', 'Next release', 'Important Notes']
 
     def __init__(self, path_or_buffer):
+        self._stream = None
+
         if hasattr(path_or_buffer, 'read'):
             self._buffer = self._iter(path_or_buffer)
         else:
-            self._buffer = self._iter(open(path_or_buffer))
+            # If `path_or_buffer` isn't a file-like object, open the file and
+            # assign to `self._stream`
+            self._stream = open(path_or_buffer)
+            self._buffer = self._iter(self._stream)
 
     def _iter(self, buffer):
         # Copy `buffer` twice:
@@ -125,6 +130,11 @@ class CSV:
             yield from line_stream
 
         return data()
+
+    def __del__(self):
+        # If the original input wasn't a file-like object, close the stream
+        if self._stream is not None:
+            self._stream.close()
 
     @property
     def metadata(self):
