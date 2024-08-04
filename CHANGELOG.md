@@ -10,6 +10,10 @@ Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 ## [Unreleased]
 
 ### Added
+
+- First version of `imf` module to read World Economic Outlook data files from
+  the [International Monetary Fund](https://www.imf.org/).
+
 ### Changed
 ### Deprecated
 ### Removed
