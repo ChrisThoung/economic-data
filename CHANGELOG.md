@@ -15,6 +15,9 @@ Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
   the [International Monetary Fund](https://www.imf.org/).
 
 ### Changed
+
+- `ons` module name to `uk_ons`.
+
 ### Deprecated
 ### Removed
 ### Fixed
