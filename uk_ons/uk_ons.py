@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-ons
-===
+uk_ons
+======
 UK Office for National Statistics (ONS) data file readers.
 
 -------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class CSV:
 
     Examples
     --------
-    >>> from ons import CSV  # This class
+    >>> from uk_ons import CSV  # This class
 
     >>> import csv
     >>> with CSV('ukea.csv') as f:

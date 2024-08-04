@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-test_ons
-========
-Tests for ONS file readers.
+test_uk_ons
+===========
+Tests for UK ONS file readers.
 """
 
 import csv
@@ -15,7 +15,7 @@ from pandas import DataFrame, Index
 from pandas.testing import assert_frame_equal
 import pandas as pd
 
-from ons import CSV
+from uk_ons import CSV
 
 
 current_dir = os.path.split(__file__)[0]
