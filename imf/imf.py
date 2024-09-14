@@ -28,9 +28,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from io import BytesIO
+import calendar
+from io import BytesIO, StringIO
+import itertools
 from os import PathLike
-from typing import Any, Dict, Union
+from pathlib import Path
+import re
+from typing import Any, Dict, List, Literal, Optional, Union
 import warnings
 
 
@@ -120,3 +124,69 @@ def detect_encoding(
     else:
         with open(path_or_buffer, 'rb') as f:
             return detect_buffer_encoding(f)
+
+
+class WEO:
+    """File-like object to read IMF World Economic Outlook datasets in TSV format.
+
+    Parameters
+    ----------
+    path_or_buffer :
+        Input to read from
+    encoding : str, default `None`
+        **If `path_or_buffer` is of type `StringIO`, `encoding` must be
+          `None`**.
+
+        If non-`None`, one of:
+         - a specific file encoding e.g. 'utf-16le', 'ISO-8859-1' etc
+         - 'infer_' : guess the encoding from the filename in `path_or_buffer`
+         - 'detect_' : guess the encoding from the contents of `path_or_buffer`
+
+        If `None` (the default), behaviour varies according to the type of
+        `path_or_buffer`:
+         - str, bytes or PathLike: 'infer_'
+         - StringIO: Ignore (encoding already implied by the object: `None` is
+                     required)
+         - BytesIO: 'detect_'
+
+    min_lines : int, default 1 (if `encoding='detect_'`)
+        Argument to `detect_encoding()`: Minimum number of lines to read from
+        `path_or_buffer`.
+    max_lines : int, default 0 (if `encoding='detect_'`)
+        Argument to `detect_encoding()`: Maximum number of lines to read from
+        `path_or_buffer`.
+        Special cases:
+          0: Read as many lines as needed to confidently detect the file
+             encoding
+         -1: Read the entire file/buffer
+    """
+
+    MONTH_NUMBERS: Dict[str, int] = {
+        x: i for i, x in enumerate(calendar.month_abbr) if len(x)
+    }
+
+    @staticmethod
+    def infer_encoding(filename_or_path: Union[str, bytes, PathLike]) -> str:
+        name = Path(filename_or_path).name
+        match_ = __class__.FILENAME_PATTERN.search(name)
+        if not match_:
+            raise ValueError(f'Unable to infer file encoding from name: {name}')
+
+        groupdict = match_.groupdict()
+        year = int(groupdict['year'])
+        month = __class__.MONTH_NUMBERS[groupdict['month']]
+
+        if month == 4:
+            if year > 2020:
+                return 'utf-16le'
+            else:
+                return 'ISO-8859-1'
+
+        if month == 9 and year == 2011:
+            return 'ISO-8859-1'
+
+        if month == 10:
+            if year == 2020:
+                return 'utf-16le'
+            else:
+                return 'ISO-8859-1'
