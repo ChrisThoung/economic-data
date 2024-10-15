@@ -161,32 +161,108 @@ class WEO:
          -1: Read the entire file/buffer
     """
 
+    FILENAME_PATTERN: Pattern = re.compile(
+        r'^WEO(?P<month>\S{3})(?P<year>\d{4}).+?(?:[.].*)?$'
+    )
+
     MONTH_NUMBERS: Dict[str, int] = {
         x: i for i, x in enumerate(calendar.month_abbr) if len(x)
     }
 
     @staticmethod
-    def infer_encoding(filename_or_path: Union[str, bytes, PathLike]) -> str:
-        name = Path(filename_or_path).name
-        match_ = __class__.FILENAME_PATTERN.search(name)
+    def infer_encoding(
+        filename_or_path: Union[str, bytes, PathLike],
+        *,
+        regex_or_pattern: Optional[Union[str, Pattern]] = None,
+    ) -> str:
+        """Return the file encoding inferred from the filename in `filename_or_path`.
+
+        Parameters
+        ----------
+        filename_or_path :
+            Name or path to assess. This function operates on the `stem` of
+            `Path(filename_or_path)`, ignoring the path and any file extension.
+        regex_or_pattern : default, `None`
+            Regular expression to use to extract the month and year information
+            from `filename_or_path`. If `None`, default to the regex in the
+            current class's `FILENAME_PATTERN` attribute.
+
+        Returns
+        -------
+        : str
+            The inferred coding e.g. 'utf-16le' or 'ISO-8859-1'
+
+        Notes
+        -----
+        Under the default regex, this function assumes that the filename
+        conforms to the standard one for IMF WEO downloads
+        e.g. 'WEOApr2022all', 'WEOOct2022all', 'WEOApr2023all',
+        'WEOOct2023all', 'WEOApr2024all' etc.
+
+        The default regex extracts the month (converting it to an integer) as
+        well as the year (also converting to an integer). These fields
+        correspond to the date of the relevant database release.
+
+        For example, for the filename 'WEOApr2024all', the fields are:
+         - year: int = 2024 (extracted from '2024')
+         - month: int = 4 (translated from 'Apr')
+
+        Any alternative regex needs to extract the following as named fields
+        (using `groupdict()`):
+         - year: str = the year of the database release (the function converts
+                       this to int)
+         - month: str = the three-character month of the database release,
+                        usually 'Apr' or 'Oct' (the function maps this to an
+                        int, with Jan = 1)
+        """
+        # Use a `Path` object to extract the filename; for example:
+        #  - /path/to/somefile.xls -> somefile
+        #  - somefile.xls -> somefile
+        name = Path(filename_or_path).stem
+
+        # Set regex for month-year search
+        if regex_or_pattern is None:
+            pattern = __class__.FILENAME_PATTERN
+        elif not isinstance(regex_or_pattern, Pattern):
+            pattern = re.compile(regex_or_pattern)
+        else:
+            pattern = regex_or_pattern
+
+        # Search the filename for the month and year
+        match_ = pattern.search(name)
         if not match_:
-            raise ValueError(f'Unable to infer file encoding from name: {name}')
+            msg = f'Unable to infer file encoding from name: {name}'
+            raise ValueError(msg)
 
         groupdict = match_.groupdict()
-        year = int(groupdict['year'])
-        month = __class__.MONTH_NUMBERS[groupdict['month']]
 
+        month = __class__.MONTH_NUMBERS[groupdict['month']]
+        year = int(groupdict['year'])
+
+        # Infer the file encoding from the month-year combination
+
+        # April publications:
+        #  - 2021 onwards: 'utf-16le'
+        #  - otherwise: 'ISO-8859-1'
         if month == 4:
-            if year > 2020:
+            if year >= 2021:
                 return 'utf-16le'
             else:
                 return 'ISO-8859-1'
 
-        if month == 9 and year == 2011:
-            return 'ISO-8859-1'
-
+        # October publications:
+        #  - 2020 (special case): 'utf-16le'
+        #  - otherwise: 'ISO-8859-1'
         if month == 10:
             if year == 2020:
                 return 'utf-16le'
             else:
                 return 'ISO-8859-1'
+
+        # September 2011 (one-off)
+        if month == 9 and year == 2011:
+            return 'ISO-8859-1'
+
+        # If here, raise an exception from being unable to infer an encoding
+        msg = f'Unable to infer file encoding from: {filename_or_path}'
+        raise ValueError(msg)
