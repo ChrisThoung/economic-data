@@ -78,7 +78,8 @@ def detect_encoding(
 
     See also
     --------
-    https://chardet.readthedocs.io/en/latest/usage.html#example-detecting-encoding-incrementally
+    Python chardet package:
+        https://chardet.readthedocs.io/en/latest/usage.html#example-detecting-encoding-incrementally
     """
     from chardet.universaldetector import UniversalDetector
 
