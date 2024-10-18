@@ -160,6 +160,11 @@ class WEO:
           0: Read as many lines as needed to confidently detect the file
              encoding
          -1: Read the entire file/buffer
+
+    See also
+    --------
+    IMF World Economic Outlook databases:
+        https://www.imf.org/en/Publications/SPROLLs/world-economic-outlook-databases
     """
 
     # Regex: Extract `month` and `year` from a standard IMF WEO filename
