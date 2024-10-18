@@ -242,10 +242,10 @@ class WEO:
         # Infer the file encoding from the month-year combination
 
         # April publications:
-        #  - 2021 onwards: 'utf-16le'
+        #  - 2022 onwards: 'utf-16le'
         #  - otherwise: 'ISO-8859-1'
         if month == 4:
-            if year >= 2021:
+            if year >= 2022:
                 return 'utf-16le'
             else:
                 return 'ISO-8859-1'
