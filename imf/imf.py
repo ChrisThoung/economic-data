@@ -161,10 +161,13 @@ class WEO:
          -1: Read the entire file/buffer
     """
 
+    # Regex: Extract `month` and `year` from a standard IMF WEO filename
     FILENAME_PATTERN: Pattern = re.compile(
         r'^WEO(?P<month>\S{3})(?P<year>\d{4}).+?(?:[.].*)?$'
     )
 
+    # Mapping: Three-character month names to (1-based) numbers
+    #          ('Jan', 1), ('Feb', 2), ('Mar', 3) etc
     MONTH_NUMBERS: Dict[str, int] = {
         x: i for i, x in enumerate(calendar.month_abbr) if len(x)
     }
