@@ -34,7 +34,7 @@ import itertools
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Pattern, Union
 import warnings
 
 
