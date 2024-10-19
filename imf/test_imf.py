@@ -17,7 +17,9 @@ class TestTSV(unittest.TestCase):
         # match for a given set of input files
         for path in Path('test_data').glob('*.xls'):
             with self.subTest(path=path):
-                self.assertEqual(WEO.infer_encoding(path), detect_encoding(path)['encoding'])
+                self.assertEqual(
+                    WEO.infer_encoding(path), detect_encoding(path)['encoding']
+                )
 
     def test_infer_encoding(self):
         # Check that `infer_encoding()` identifies the correct encoding
