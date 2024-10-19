@@ -5,12 +5,20 @@ test_imf
 Tests for IMF file readers.
 """
 
+from pathlib import Path
 import unittest
 
-from imf import WEO
+from imf import WEO, detect_encoding
 
 
 class TestTSV(unittest.TestCase):
+    def test_detect_infer_encoding(self):
+        # Check that the results of `detect_encoding()` and `infer_encoding()`
+        # match for a given set of input files
+        for path in Path('test_data').glob('*.xls'):
+            with self.subTest(path=path):
+                self.assertEqual(WEO.infer_encoding(path), detect_encoding(path)['encoding'])
+
     def test_infer_encoding(self):
         # Check that `infer_encoding()` identifies the correct encoding
         test_cases = {
