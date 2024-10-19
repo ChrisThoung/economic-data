@@ -34,7 +34,7 @@ import itertools
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Literal, Optional, Pattern, Union
+from typing import Any, Dict, Iterator, List, Literal, Optional, Pattern, Union
 import warnings
 
 
@@ -161,11 +161,25 @@ class WEO:
              encoding
          -1: Read the entire file/buffer
 
+    Notes
+    -----
+    This class exposes one attribute, `encoding`, which may either be supplied
+    by the user or detected/inferred.
+
+    The remaining two attributes are internal only:
+
+    1. `_buffer`, which returns successive lines from the file
+    2. `_stream`, which is only a file-like object if the original input *was
+       not* a file-like object. This signals that the file needs to be closed
+       again on completion e.g. if using a context manager
+
     See also
     --------
     IMF World Economic Outlook databases:
         https://www.imf.org/en/Publications/SPROLLs/world-economic-outlook-databases
     """
+
+    __slots__: List[str] = ['_buffer', '_stream', 'encoding']
 
     # Regex: Extract `month` and `year` from a standard IMF WEO filename
     FILENAME_PATTERN: Pattern = re.compile(
@@ -177,6 +191,89 @@ class WEO:
     MONTH_NUMBERS: Dict[str, int] = {
         x: i for i, x in enumerate(calendar.month_abbr) if len(x)
     }
+
+    def __init__(
+        self,
+        path_or_buffer: Union[str, bytes, PathLike, StringIO, BytesIO],
+        *,
+        encoding: Optional[Union[str, Literal['infer_', 'detect_']]] = None,
+        min_lines: int = 1,
+        max_lines: int = 0,
+    ) -> None:
+        # Set instance attributes
+        self._buffer: Iterator[str]
+        self._stream: Optional[StringIO] = None
+        self.encoding: str
+
+        # Routes:
+        # 1. Buffer (has a 'read' attribute)
+        #     a. StringIO: Store the buffer and return values on demand (this
+        #        is unusual case because all the work to handle the encoding is
+        #        already done)
+        #     b. BytesIO:
+        #         i.  Encoding either not specified or set to 'detect_': Fork
+        #             the buffer and try to determine the encoding
+        #         ii. Encoding specified: Use that encoding
+        # 2. Path (anything else)
+        #     a. Encoding either not specified or set to 'infer_': Try to
+        #        determine the encoding from the name of the file
+        #     b. Encoding set to 'detect_': Open the file and try to determine
+        #        the encoding based on its contents
+        #     c. Encoding is specified: Use that encoding
+
+        # 1. Buffer (has a 'read' attribute)
+        if hasattr(path_or_buffer, 'read'):
+            # 1a. StringIO: Store the buffer and return values on demand
+            if isinstance(path_or_buffer, StringIO):
+                self._buffer = path_or_buffer
+                self.encoding = path_or_buffer.encoding
+                return
+
+            # 1b. BytesIO
+            if isinstance(path_or_buffer, BytesIO):
+                # 1b.i BytesIO: Encoding either not specified or set to
+                #      'detect_': Try to determine the encoding
+                if encoding is None or encoding == 'detect_':
+                    buffer, tmp = itertools.tee(path_or_buffer, 2)
+
+                    result = detect_encoding(
+                        tmp, min_lines=min_lines, max_lines=max_lines
+                    )
+                    self.encoding = result['encoding']
+
+                    self._buffer = map(lambda x: x.decode(self.encoding, buffer))
+                    return
+
+                # 1b.ii BytesIO: Encoding is specified
+                else:
+                    self.encoding = encoding
+                    self._buffer = map(
+                        lambda x: x.decode(self.encoding, path_or_buffer)
+                    )
+                    return
+
+        # 2. Path (anything else)
+
+        # 2a. Encoding either not specified or set to 'infer_': Try to
+        #     determine the encoding from the name of the file
+        if encoding is None or encoding == 'infer_':
+            self.encoding = self.infer_encoding(path_or_buffer)
+            self._buffer = self._stream = open(path_or_buffer, encoding=self.encoding)
+            return
+
+        # 2b. Encoding set to 'detect_': Open the file and try to determine the
+        #     encoding based on its contents
+        if encoding == 'detect_':
+            result = detect_encoding(
+                path_or_buffer, min_lines=min_lines, max_lines=max_lines
+            )
+            self.encoding = result['encoding']
+            self._buffer = self._stream = open(path_or_buffer, encoding=self.encoding)
+            return
+
+        # 2c. Anything else: Open the file with the desired encoding
+        self.encoding = encoding
+        self._buffer = self._stream = open(path_or_buffer, encoding=self.encoding)
 
     @staticmethod
     def infer_encoding(
@@ -275,3 +372,32 @@ class WEO:
         # If here, raise an exception from being unable to infer an encoding
         msg = f'Unable to infer file encoding from: {filename_or_path}'
         raise ValueError(msg)
+
+    def __del__(self) -> None:
+        # If the original input wasn't a file-like object, close the stream
+        if self._stream is not None:
+            self._stream.close()
+
+    def __iter__(self) -> Iterator[str]:
+        yield from self._buffer
+
+    def __next__(self) -> str:
+        return next(self._buffer)
+
+    def read(self, size: int = -1) -> str:
+        if size == -1:
+            return ''.join(self._buffer)
+        else:
+            return self.readline()
+
+    def readline(self, *args: Any) -> str:
+        try:
+            return next(self._buffer)
+        except StopIteration:
+            return ''
+
+    def __enter__(self) -> 'WEO':
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        pass
