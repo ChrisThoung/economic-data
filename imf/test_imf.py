@@ -30,7 +30,7 @@ EXPECTED_PROPERTIES = {
 }  # fmt: skip
 
 
-class TestTSV(unittest.TestCase):
+class TestWEO(unittest.TestCase):
     def test_read(self):
         # Check that file reads return the expected encodings and table sizes
         for path in Path('test_data').glob('*.xls'):
