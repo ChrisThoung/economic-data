@@ -27,6 +27,7 @@ EXPECTED_PROPERTIES = {
     'WEOApr2023all': ('utf-16le',   (8625, 60)),
     'WEOOct2023all': ('ISO-8859-1', (8626, 59)),
     'WEOApr2024all': ('utf-16le',   (8625, 61)),
+    'WEOOct2024all': ('utf-16le',   (8625, 61)),  # October forecasts switch file encoding from now on?
 }  # fmt: skip
 
 

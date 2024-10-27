@@ -357,10 +357,13 @@ class WEO:
                 return 'ISO-8859-1'
 
         # October publications:
+        #  - 2024 onwards: 'utf-16le'
         #  - 2020 (special case): 'utf-16le'
         #  - otherwise: 'ISO-8859-1'
         if month == 10:
-            if year == 2020:
+            if year >= 2024:
+                return 'utf-16le'
+            elif year == 2020:
                 return 'utf-16le'
             else:
                 return 'ISO-8859-1'
